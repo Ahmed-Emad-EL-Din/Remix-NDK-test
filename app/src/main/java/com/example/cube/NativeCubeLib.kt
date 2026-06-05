@@ -21,6 +21,7 @@ object NativeCubeLib {
         if (isLibraryLoaded) {
             nativeOnSurfaceCreated()
         }
+        KotlinCubeEngine.resetCube()
     }
 
     fun init(width: Int, height: Int) {
@@ -30,10 +31,11 @@ object NativeCubeLib {
     }
 
     fun step(): Float {
-        return if (isLibraryLoaded) {
-            nativeStep()
+        if (isLibraryLoaded) {
+            return nativeStep()
         } else {
-            60.0f
+            KotlinCubeEngine.step()
+            return 60.0f
         }
     }
 
@@ -41,51 +43,56 @@ object NativeCubeLib {
         if (isLibraryLoaded) {
             nativeSetRotationSpeed(speedX, speedY, speedZ)
         }
+        KotlinCubeEngine.setRotationSpeed(speedX, speedY, speedZ)
     }
 
     fun toggleRotationAxis(rx: Boolean, ry: Boolean, rz: Boolean) {
         if (isLibraryLoaded) {
             nativeToggleRotationAxis(rx, ry, rz)
         }
+        KotlinCubeEngine.toggleRotationAxis(rx, ry, rz)
     }
 
     fun setRenderMode(mode: Int) {
         if (isLibraryLoaded) {
             nativeSetRenderMode(mode)
         }
+        KotlinCubeEngine.setRenderMode(mode)
     }
 
     fun setUniformColor(r: Float, g: Float, b: Float, a: Float) {
         if (isLibraryLoaded) {
             nativeSetUniformColor(r, g, b, a)
         }
+        KotlinCubeEngine.setUniformColor(r, g, b, a)
     }
 
     fun addRotation(dx: Float, dy: Float) {
         if (isLibraryLoaded) {
             nativeAddRotation(dx, dy)
         }
+        KotlinCubeEngine.addRotation(dx, dy)
     }
 
     fun rotateLayer(axis: Int, layer: Int, direction: Int): Boolean {
-        return if (isLibraryLoaded) {
+        if (isLibraryLoaded) {
             nativeRotateLayer(axis, layer, direction)
-        } else {
-            false
         }
+        return KotlinCubeEngine.rotateLayer(axis, layer, direction)
     }
 
     fun scramble(moves: Int) {
         if (isLibraryLoaded) {
             nativeScramble(moves)
         }
+        KotlinCubeEngine.scramble(moves)
     }
 
     fun isSolved(): Boolean {
         return if (isLibraryLoaded) {
             nativeIsSolved()
         } else {
-            false
+            KotlinCubeEngine.isSolved()
         }
     }
 
@@ -93,13 +100,14 @@ object NativeCubeLib {
         if (isLibraryLoaded) {
             nativeResetCube()
         }
+        KotlinCubeEngine.resetCube()
     }
 
     fun getMoveCount(): Int {
         return if (isLibraryLoaded) {
             nativeGetMoveCount()
         } else {
-            0
+            KotlinCubeEngine.moveCount
         }
     }
 

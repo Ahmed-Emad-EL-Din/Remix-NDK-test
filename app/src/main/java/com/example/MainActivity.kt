@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,7 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -78,7 +82,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
-                        containerColor = Color(0xFF0D0D12) // Deep space obsidian background
+                        containerColor = Color(0xFF07070B) // Ultra premium deep obsidian space
                     ) { innerPadding ->
                         CubeDashboardScreen(
                             modifier = Modifier
@@ -208,7 +212,7 @@ fun DiagnosticScreen(
 }
 
 // ----------------------------------------------------------------------------
-// Rubik's Cube Levels and Schemes
+// Rubik's Cube Structures & Data Presets
 // ----------------------------------------------------------------------------
 
 data class RubikLevel(
@@ -222,24 +226,97 @@ data class RubikLevel(
 )
 
 val RubikLevels = listOf(
-    RubikLevel(1, "Learning Loop", "Beginner", 1, 3, "Only 3 random turns! Perfect for learning standard mechanics and testing combinations.", Color(0xFF2ECC71)),
-    RubikLevel(2, "Novice Twister", "Easy", 2, 6, "6 scrambles. Requires a bit of pattern recognition to re-align.", Color(0xFF3498DB)),
-    RubikLevel(3, "Intermediate Spin", "Medium", 3, 12, "12 scrambles. Perfect practice for casual solvers looking for a moderate challenge.", Color(0xFFF1C40F)),
-    RubikLevel(4, "Expert Grid", "Hard", 4, 22, "22 scrambles. Reaches a fully chaotic state. Prepare your speedcubing algorithms!", Color(0xFFE67E22)),
-    RubikLevel(5, "Grandmaster Matrix", "Very Hard", 5, 40, "40 scrambles. Total entropic decay. Only elite Rubik's masters should attempt.", Color(0xFFE74C3C)),
+    RubikLevel(1, "Learning Loop", "Beginner", 1, 3, "Only 3 random turns! Perfect for standard mechanics.", Color(0xFF00FFCC)),
+    RubikLevel(2, "Novice Twister", "Easy", 2, 6, "6 scrambles. Requires standard pattern recognition to re-align.", Color(0xFF3498DB)),
+    RubikLevel(3, "Intermediate Spin", "Medium", 3, 12, "12 scrambles. Perfect practice for casual speed solvers.", Color(0xFFF1C40F)),
+    RubikLevel(4, "Expert Grid", "Hard", 4, 22, "22 scrambles. Fully chaotic state. Prepare your speedcubing algorithms!", Color(0xFFE67E22)),
+    RubikLevel(5, "Grandmaster Matrix", "Very Hard", 5, 40, "40 scrambles. Total entropic decay. Only elite Rubik's masters.", Color(0xFFE74C3C)),
     RubikLevel(6, "Infinite Entropy", "Expert", 5, 60, "60 random turns. Deep-space disorder! Can you solve the ultimate puzzle?", Color(0xFF9B59B6))
+).distinctBy { it.id } // safety remove duplicate levels
+
+data class ColorThemePreset(val name: String, val r: Float, val g: Float, val b: Float, val colorAccent: Color)
+
+val ThemePresets = listOf(
+    ColorThemePreset("Hologram Cyan", 0.0f, 0.82f, 1.00f, Color(0xFF00E5FF)),
+    ColorThemePreset("Infrared Orange", 1.0f, 0.35f, 0.10f, Color(0xFFFF5722)),
+    ColorThemePreset("Acid Emerald", 0.15f, 0.95f, 0.45f, Color(0xFF00E676)),
+    ColorThemePreset("Cyber Fuchsia", 1.0f, 0.15f, 0.65f, Color(0xFFF50057)),
+    ColorThemePreset("Solar Gold", 1.0f, 0.80f, 0.05f, Color(0xFFFFD600))
+)
+
+data class SequenceStep(val name: String, val axis: Int, val layer: Int, val direction: Int)
+data class CubeAlgorithm(val name: String, val difficulty: String, val formula: String, val steps: List<SequenceStep>)
+
+val SpeedtubeAlgorithms = listOf(
+    CubeAlgorithm(
+        "Sexy Move", 
+        "Essential", 
+        "R U R' U'", 
+        listOf(
+            SequenceStep("R", 0, 1, 1),
+            SequenceStep("U", 1, 1, 1),
+            SequenceStep("R'", 0, 1, -1),
+            SequenceStep("U'", 1, 1, -1)
+        )
+    ),
+    CubeAlgorithm(
+        "The Sune", 
+        "Intermediate", 
+        "R U R' U R U2 R'", 
+        listOf(
+            SequenceStep("R", 0, 1, 1),
+            SequenceStep("U", 1, 1, 1),
+            SequenceStep("R'", 0, 1, -1),
+            SequenceStep("U", 1, 1, 1),
+            SequenceStep("R", 0, 1, 1),
+            SequenceStep("U", 1, 1, 1),
+            SequenceStep("U", 1, 1, 1),
+            SequenceStep("R'", 0, 1, -1)
+        )
+    ),
+    CubeAlgorithm(
+        "Sledgehammer", 
+        "Advanced", 
+        "R' F R F'", 
+        listOf(
+            SequenceStep("R'", 0, 1, -1),
+            SequenceStep("F", 2, 1, 1),
+            SequenceStep("R", 0, 1, 1),
+            SequenceStep("F'", 2, 1, -1)
+        )
+    )
+)
+
+data class SavedMove(val notation: String, val axis: Int, val layer: Int, val direction: Int)
+
+// ----------------------------------------------------------------------------
+// Simple Confetti Particle State
+// ----------------------------------------------------------------------------
+class ConfettiState(
+    var x: Float,
+    var y: Float,
+    val size: Float,
+    val color: Color,
+    val velocityX: Float,
+    val velocityY: Float,
+    var angle: Float,
+    val rotationSpeed: Float
 )
 
 @Composable
 fun CubeDashboardScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val sp = remember { context.getSharedPreferences("rubik_records", Context.MODE_PRIVATE) }
 
-    // Core configuration states
+    // Navigation and Visual configuration states
+    var activeTab by remember { mutableIntStateOf(0) } // 0 = Challenges, 1 = Controller Console, 2 = Academy Solves, 3 = Engine Settings
     var renderMode by remember { mutableIntStateOf(0) } // 0 = Standard, 1 = Neon, 2 = Wireframe
     var currentFps by remember { mutableFloatStateOf(60.0f) }
+    var selectedThemeIdx by remember { mutableIntStateOf(0) }
+    val activeTheme = ThemePresets[selectedThemeIdx]
 
-    // Gamification states
+    // Gamification state managers
     var selectedLevelId by remember { mutableIntStateOf(1) }
     val currentLevel = remember(selectedLevelId) { RubikLevels.first { it.id == selectedLevelId } }
 
@@ -249,18 +326,84 @@ fun CubeDashboardScreen(modifier: Modifier = Modifier) {
     var isGameStarted by remember { mutableStateOf(false) }
     var showCompleteModal by remember { mutableStateOf(false) }
 
-    val recentMoves = remember { mutableStateListOf<String>() }
+    // Live logging and backstack
+    val recentMovesLog = remember { mutableStateListOf<String>() }
+    val moveBackStack = remember { mutableStateListOf<SavedMove>() }
 
-    // Records
+    // Personal Records
     var personalBestMoves by remember(selectedLevelId) { mutableStateOf(sp.getInt("moves_level_$selectedLevelId", -1)) }
     var personalBestTime by remember(selectedLevelId) { mutableStateOf(sp.getInt("time_level_$selectedLevelId", -1)) }
 
-    // Synchronize Shader Modes
-    LaunchedEffect(renderMode) {
-        NativeCubeLib.setRenderMode(renderMode)
+    // Auto Playing Algorithm Thread Status
+    var isPlayingAlgorithm by remember { mutableStateOf(false) }
+    var activeStepName by remember { mutableStateOf("") }
+    var activeStepIndex by remember { mutableIntStateOf(0) }
+    var activeStepTotal by remember { mutableIntStateOf(0) }
+
+    // Rotating Speed engine settings
+    var activeAngleXSpin by remember { mutableStateOf(false) }
+    var activeAngleYSpin by remember { mutableStateOf(false) }
+    var activeAngleZSpin by remember { mutableStateOf(false) }
+
+    // Particle engine variables
+    var confettiTrigger by remember { mutableIntStateOf(0) }
+    val particles = remember {
+        mutableStateListOf<ConfettiState>().apply {
+            val colors = listOf(
+                Color(0xFF00E5FF), Color(0xFFFF5722), Color(0xFF00E676),
+                Color(0xFFF50057), Color(0xFFFFD600), Color(0xFF9C27B0), Color(0xFFFFFFFF)
+            )
+            repeat(100) {
+                add(
+                    ConfettiState(
+                        x = (100..900).random().toFloat(),
+                        y = (-200..0).random().toFloat(),
+                        size = (10..30).random().toFloat(),
+                        color = colors.random(),
+                        velocityX = (-4..4).random().toFloat(),
+                        velocityY = (6..18).random().toFloat(),
+                        angle = (0..360).random().toFloat(),
+                        rotationSpeed = (-8..8).random().toFloat()
+                    )
+                )
+            }
+        }
     }
 
-    // Active Timer Thread
+    // Thread loop updater for Level Solved Confetti Canvas
+    LaunchedEffect(isSolved, showCompleteModal, confettiTrigger) {
+        if (isSolved && showCompleteModal) {
+            delay(16L) // ~60 FPS update
+            for (p in particles) {
+                p.y += p.velocityY
+                p.x += p.velocityX
+                p.angle += p.rotationSpeed
+                if (p.y > 1600f) {
+                    p.y = -50f
+                    p.x = (100..900).random().toFloat()
+                }
+            }
+            confettiTrigger++
+        }
+    }
+
+    // Keep Uniform colors & Render mode updated with C++ Engine
+    LaunchedEffect(renderMode, selectedThemeIdx) {
+        NativeCubeLib.setRenderMode(renderMode)
+        NativeCubeLib.setUniformColor(activeTheme.r, activeTheme.g, activeTheme.b, 1.0f)
+    }
+
+    // Toggle Axis Spining
+    LaunchedEffect(activeAngleXSpin, activeAngleYSpin, activeAngleZSpin) {
+        NativeCubeLib.toggleRotationAxis(activeAngleXSpin, activeAngleYSpin, activeAngleZSpin)
+        NativeCubeLib.setRotationSpeed(
+            if (activeAngleXSpin) 1.5f else 0f,
+            if (activeAngleYSpin) 1.5f else 0f,
+            if (activeAngleZSpin) 1.5f else 0f
+        )
+    }
+
+    // Game Session Duration Timer Thread
     LaunchedEffect(isGameStarted, isSolved) {
         if (isGameStarted && !isSolved) {
             while (true) {
@@ -270,39 +413,67 @@ fun CubeDashboardScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // Helper functions
+    // Controller actions and helpers
     fun triggerScramble() {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         NativeCubeLib.scramble(currentLevel.scrambles)
         moveCount = 0
         isSolved = false
         gameTimerSeconds = 0
         isGameStarted = true
         showCompleteModal = false
-        recentMoves.clear()
+        recentMovesLog.clear()
+        moveBackStack.clear()
     }
 
     fun makeRubikMove(symbol: String, axis: Int, layer: Int, direction: Int) {
+        if (isPlayingAlgorithm) return // block manual override during auto scripts
+        
         if (!isGameStarted) {
             triggerScramble()
         }
+        
         val success = NativeCubeLib.rotateLayer(axis, layer, direction)
         if (success) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             moveCount++
-            if (recentMoves.size >= 8) {
-                recentMoves.removeAt(0)
+            
+            // Record Move Back Stack for Undo
+            moveBackStack.add(SavedMove(symbol, axis, layer, direction))
+            
+            // Display Log strip
+            if (recentMovesLog.size >= 8) {
+                recentMovesLog.removeAt(0)
             }
-            recentMoves.add(symbol)
+            recentMovesLog.add(symbol)
         }
     }
 
-    // Polled Solved-State Checker
+    // Satisfying Live Undo Step function
+    fun undoLastMove() {
+        if (moveBackStack.isNotEmpty() && !isSolved && !isPlayingAlgorithm) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            val lastMove = moveBackStack.removeAt(moveBackStack.size - 1)
+            // Undo is rotating key dimensions in opposite direction (-direction)
+            val success = NativeCubeLib.rotateLayer(lastMove.axis, lastMove.layer, lastMove.direction * -1)
+            if (success) {
+                moveCount = maxOf(0, moveCount - 1)
+                if (recentMovesLog.isNotEmpty()) {
+                    recentMovesLog.removeAt(recentMovesLog.size - 1)
+                }
+            }
+        }
+    }
+
+    // Solve State Checker Core Thread
     LaunchedEffect(isGameStarted, moveCount) {
-        if (isGameStarted && !isSolved) {
-            delay(280L) // Wait slightly for layer transition to snap completely in C++
+        if (isGameStarted && !isSolved && !isPlayingAlgorithm) {
+            delay(320L) // Wait slightly for OpenGL matrix to snap before checking solved hash states map
             if (NativeCubeLib.isSolved()) {
                 isSolved = true
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 
-                // Record check & commit
+                // Record personal best values
                 val bestMoves = sp.getInt("moves_level_$selectedLevelId", -1)
                 val bestTime = sp.getInt("time_level_$selectedLevelId", -1)
 
@@ -316,188 +487,339 @@ fun CubeDashboardScreen(modifier: Modifier = Modifier) {
                     personalBestTime = gameTimerSeconds
                 }
                 editor.commit()
-
                 showCompleteModal = true
             }
         }
     }
 
-    // Main scrollable grid
+    // Play Sequential Algo script coroutine helper
+    fun executeAlgorithmSeq(algorithmName: String, steps: List<SequenceStep>) {
+        if (isPlayingAlgorithm) return
+        isPlayingAlgorithm = true
+        activeStepName = algorithmName
+        activeStepTotal = steps.size
+        
+        // Temporarily reset rotation and auto spin to show cleanly
+        val prevXSpin = activeAngleXSpin
+        val prevYSpin = activeAngleYSpin
+        val prevZSpin = activeAngleZSpin
+        activeAngleXSpin = false
+        activeAngleYSpin = false
+        activeAngleZSpin = false
+        
+        recentMovesLog.clear()
+        
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            val runner = object : Runnable {
+                var stepIdx = 0
+                override fun run() {
+                    if (stepIdx < steps.size) {
+                        activeStepIndex = stepIdx + 1
+                        val s = steps[stepIdx]
+                        
+                        // Rotates layer natively
+                        NativeCubeLib.rotateLayer(s.axis, s.layer, s.direction)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        recentMovesLog.add(s.name)
+                        
+                        stepIdx++
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this, 500L)
+                    } else {
+                        isPlayingAlgorithm = false
+                        activeAngleXSpin = prevXSpin
+                        activeAngleYSpin = prevYSpin
+                        activeAngleZSpin = prevZSpin
+                    }
+                }
+            }
+            runner.run()
+        }
+    }
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Game Header
-        Text(
-            text = "3D RUBIK'S CUBE",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.ExtraBold,
-                fontFamily = FontFamily.SansSerif,
-                letterSpacing = 2.sp
-            ),
-            color = Color.White,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-        
-        Text(
-            text = "Modern OpenGL ES 3.0 & Native C++ Speedcube Game",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF8E8E9F),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // Game HUD / Stats Panel
+        // Futuristic App Bar
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF12121A))
-                .border(1.dp, Color(0xFF1E1E2C), RoundedCornerShape(16.dp))
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("MOVES", style = MaterialTheme.typography.labelSmall, color = Color(0xFF8E8E9F))
+                Text(
+                    text = "3D RUBIK PRO",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 2.5.sp,
+                        fontFamily = FontFamily.SansSerif
+                    ),
+                    color = Color.White
+                )
+                Text(
+                    text = "High-Fidelity Speedcubing Simulator",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF6B7280)
+                )
+            }
+            
+            // Neon Level Indicator Badge
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(currentLevel.accentColor.copy(alpha = 0.15f))
+                    .border(1.dp, currentLevel.accentColor.copy(alpha = 0.3f), RoundedCornerShape(30.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = currentLevel.difficulty.uppercase(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
+                    color = currentLevel.accentColor,
+                    letterSpacing = 1.sp
+                )
+            }
+        }
+
+        // Live Gaming HUD panel
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF101016))
+                .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(16.dp))
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("MOVES", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                 Text(
                     text = if (isGameStarted) "$moveCount" else "--",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Black,
+                        fontFamily = FontFamily.Monospace
+                    ),
                     color = currentLevel.accentColor
                 )
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("GAME TIME", style = MaterialTheme.typography.labelSmall, color = Color(0xFF8E8E9F))
+                Text("DURATION", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                 val minutes = gameTimerSeconds / 60
                 val seconds = gameTimerSeconds % 60
                 Text(
-                    text = if (isGameStarted) "%02d:%02d".format(minutes, seconds) else "00:00",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace),
+                    text = if (isGameStarted) "%02d:%01d".format(minutes, seconds).replace(":", "m ") + "s" else "00s",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    ),
                     color = Color.White
                 )
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                Text("LEVEL STATUS", style = MaterialTheme.typography.labelSmall, color = Color(0xFF8E8E9F))
-                Text(
-                    text = if (isSolved) "SOLVED 🎉" else if (isGameStarted) "PLAYING" else "READY",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
-                    color = if (isSolved) Color(0xFF2ECC71) else if (isGameStarted) Color(0xFFF1C40F) else Color(0xFF8E8E9F)
-                )
+                Text("SOLVED TRACKER", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(if (isSolved) Color(0xFF10B981) else if (isGameStarted) Color(0xFFFBBF24) else Color(0xFF4B5563))
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isSolved) "COMPLETED" else if (isGameStarted) "SOLVING" else "READY",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSolved) Color(0xFF10B981) else if (isGameStarted) Color(0xFFFBBF24) else Color(0xFF6B7280)
+                    )
+                }
             }
         }
 
-        // Beautiful 3D OpenGL Surface View Panel
+        // Beautiful 3D OpenGL Surface View Frame inside Obsidian Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.1f)
+                .aspectRatio(1.15f)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF07070A))
-                .border(2.dp, Brush.linearGradient(
-                    colors = listOf(Color(0xFF1F1F2E), Color(0xFF0F0F15))
-                ), RoundedCornerShape(24.dp))
+                .background(Color(0xFF040407))
+                .border(
+                    width = 2.dp,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color(0xFF1E2135), Color(0xFF0F101A))
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                )
         ) {
-            // Mounting GLES3 Canvas Surface
+            // Live Mounting GLES3 Canvas Surface
             CubeView(
                 modifier = Modifier.fillMaxSize(),
-                onFpsUpdated = { fpsVal ->
+                onFpsUpdated = { fps ->
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        currentFps = fpsVal
+                        currentFps = fps
                     }
                 }
             )
 
-            // GLES + NDK Performance Overlay
+            // Neon Performance overlay (displays GLES engine status)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(12.dp)
+                    .padding(14.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xDD040406))
-                    .border(1.dp, Color(0xFF1F1F2F), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .background(Color(0xE006060A))
+                    .border(1.dp, Color(0xFF1F2235), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 8.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(if (currentFps > 45) Color(0xFF2ECC71) else Color(0xFFF39C12))
+                        .background(if (currentFps > 45) Color(0xFF10B981) else Color(0xFFFBBF24))
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "GLES 3.0: ${"%.1f".format(currentFps)} FPS",
-                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
-                    color = Color(0xFF00D1FF)
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = Color(0xFF00E5FF)
                 )
             }
 
-            // Swipe instruction HUD
-            Text(
-                text = "Hold & Swipe background to inspect 3D layers",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0x55FFFFFF),
-                fontWeight = FontWeight.Medium,
+            // Real Time Swipe instruction overlay
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 10.dp)
-            )
+                    .padding(bottom = 12.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xB3101017))
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "Swipe background to inspect 3D camera orbits",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color(0xFFA1A1AA)
+                )
+            }
 
-            // Celebratory Win Overlay
-            if (isSolved && showCompleteModal) {
+            // Auto Playing algorithm overlay state
+            if (isPlayingAlgorithm) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xCC080C0B))
-                        .padding(16.dp),
+                        .background(Color(0x99000000)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color(0xFF0E1A14))
-                            .border(1.dp, Color(0xFF2ECC71).copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF0D0D15))
+                            .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(16.dp))
                             .padding(20.dp)
                     ) {
+                        CircularProgressIndicator(
+                            color = Color(0xFF00E5FF),
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "LEVEL SOLVED! 🎉",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
-                            color = Color(0xFF2ECC71)
+                            text = "DEMONSTRATING ALGORITHM",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                            color = Color(0xFF9E9E9E)
+                        )
+                        Text(
+                            text = activeStepName,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Color.White
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Amazing speedcubing pattern recognition!",
+                            text = "Step $activeStepIndex / $activeStepTotal",
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            color = Color(0xFF00E5FF)
+                        )
+                    }
+                }
+            }
+
+            // High Fidelity Celebration Canvas & Particle engine
+            if (isSolved && showCompleteModal) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    for (p in particles) {
+                        rotate(p.angle, pivot = androidx.compose.ui.geometry.Offset(p.x, p.y)) {
+                            drawRect(
+                                color = p.color,
+                                topLeft = androidx.compose.ui.geometry.Offset(p.x, p.y),
+                                size = androidx.compose.ui.geometry.Size(p.size, p.size * 0.6f)
+                            )
+                        }
+                    }
+                }
+
+                // Solved result card
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xE608090F))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color(0xFF0A1C16))
+                            .border(1.dp, Color(0xFF10B981).copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                            .padding(24.dp)
+                    ) {
+                        Text(
+                            text = "CUBE SOLVED! 🎉",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 2.sp
+                            ),
+                            color = Color(0xFF10B981)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Excellent speedcubing patterns and solutions!",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF90A499),
+                            color = Color(0xFF9ACCA9),
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                Text("Moves taken", style = MaterialTheme.typography.labelSmall, color = Color(0xFF758F81))
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Moves Count", style = MaterialTheme.typography.labelSmall, color = Color(0xFF7BA686))
                                 Text("$moveCount", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
                             }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 val mins = gameTimerSeconds / 60
                                 val secs = gameTimerSeconds % 60
-                                Text("Time taken", style = MaterialTheme.typography.labelSmall, color = Color(0xFF758F81))
+                                Text("Time Elapsed", style = MaterialTheme.typography.labelSmall, color = Color(0xFF7BA686))
                                 Text("%02d:%02d".format(mins, secs), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -506,8 +828,8 @@ fun CubeDashboardScreen(modifier: Modifier = Modifier) {
                             Button(
                                 onClick = { showCompleteModal = false },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF142019), contentColor = Color(0xFF2ECC71)),
-                                shape = RoundedCornerShape(10.dp)
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF11261B), contentColor = Color(0xFF10B981)),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text("DISMISS", fontWeight = FontWeight.Bold)
                             }
@@ -519,8 +841,8 @@ fun CubeDashboardScreen(modifier: Modifier = Modifier) {
                                         triggerScramble()
                                     },
                                     modifier = Modifier.weight(1.3f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71), contentColor = Color.White),
-                                    shape = RoundedCornerShape(10.dp)
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.White),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text("NEXT LEVEL", fontWeight = FontWeight.ExtraBold)
                                 }
@@ -531,383 +853,614 @@ fun CubeDashboardScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Live Move Log Trace Bar (Only visible if moves are made)
+        // ----------------------------------------------------------------------------
+        // Obsidian Style Tab bar selection row
+        // ----------------------------------------------------------------------------
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFF101016))
+                .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(14.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            val tabs = listOf("🏆 LEVEL", "🕹️ MOVE", "🪄 SEXY", "⚙️ ENGINE")
+            tabs.forEachIndexed { index, title ->
+                val isSelected = activeTab == index
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSelected) Color(0xFF1F2235) else Color.Transparent)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            activeTab = index
+                        }
+                        .padding(vertical = 11.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        ),
+                        color = if (isSelected) Color(0xFF00E5FF) else Color(0xFF9CA3AF)
+                    )
+                }
+            }
+        }
+
+        // Live Dynamic move history strip log (always visible if elements exist)
         AnimatedVisibility(
-            visible = recentMoves.isNotEmpty(),
+            visible = recentMovesLog.isNotEmpty(),
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 10.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF0F0F14))
-                    .border(1.dp, Color(0xFF1A1A26), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF0D0D14))
+                    .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("MOVE LOG:", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF8E8E9F))
-                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "NOTATION LINE:",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFF9CA3AF)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    recentMoves.forEach { move ->
+                    recentMovesLog.forEach { valStr ->
                         Text(
-                            text = move,
+                            text = valStr,
                             fontFamily = FontFamily.Monospace,
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            color = if (move.endsWith("'")) Color(0xFF00D1FF) else Color.White
+                            color = if (valStr.endsWith("'")) Color(0xFF00E5FF) else Color.White
                         )
                     }
                 }
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Undo Settings",
-                    tint = Color(0xFF5E5E6E),
+                    contentDescription = "Clear History",
+                    tint = Color(0xFF4B5563),
                     modifier = Modifier
-                        .size(16.dp)
-                        .clickable { recentMoves.clear() }
+                        .size(18.dp)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            recentMovesLog.clear()
+                            moveBackStack.clear()
+                        }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        // ----------------------------------------------------------------------------
+        // Tab Content Router
+        // ----------------------------------------------------------------------------
+        when (activeTab) {
+            0 -> {
+                // Tab 0: CHALLENGES LIST & CHOOSE CAROUSEL
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF101016))
+                        .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(20.dp))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "CHALLENGES PLAYLIST",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color(0xFF9CA3AF)
+                    )
 
-        // Level Select Carousel
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF12121A))
-                .border(1.dp, Color(0xFF1E1E2C), RoundedCornerShape(20.dp))
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "SELECT LEVEL CHALLENGE",
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                color = Color(0xFF8E8E9F),
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        RubikLevels.forEach { lvl ->
+                            val isSelected = selectedLevelId == lvl.id
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) lvl.accentColor.copy(alpha = 0.12f) else Color(0xFF15151F))
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) lvl.accentColor else Color.Transparent,
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        selectedLevelId = lvl.id
+                                    }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Dot badge
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(lvl.accentColor)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
 
-            // Horizontal scrolling or vertical options list
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                RubikLevels.forEach { level ->
-                    val isSelected = selectedLevelId == level.id
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Lvl ${lvl.id}: ${lvl.name}",
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Row {
+                                            repeat(lvl.stars) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Star,
+                                                    contentDescription = "Difficulty Point",
+                                                    tint = lvl.accentColor,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        text = "${lvl.scrambles} scrambles • ${lvl.difficulty}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF9CA3AF)
+                                    )
+                                }
+
+                                if (isSelected) {
+                                    Button(
+                                        onClick = { triggerScramble() },
+                                        colors = ButtonDefaults.buttonColors(containerColor = lvl.accentColor, contentColor = Color.Black),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.testTag("scramble_btn_${lvl.id}")
+                                    ) {
+                                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Play", modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("START", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Level Info Description callout Card
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) level.accentColor.copy(alpha = 0.12f) else Color(0xFF181824))
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) level.accentColor else Color.Transparent,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .clickable { selectedLevelId = level.id }
+                            .background(Color(0xFF15151F))
                             .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.Top
                     ) {
-                        // Difficulty badge
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(level.accentColor)
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Descriptor Icon",
+                            tint = currentLevel.accentColor,
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = currentLevel.desc,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFE5E7EB)
+                        )
+                    }
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Lvl ${level.id}: ${level.name}",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                    // Personal Highscores statistics
+                    if (personalBestMoves != -1 || personalBestTime != -1) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(currentLevel.accentColor.copy(alpha = 0.05f))
+                                .border(1.dp, currentLevel.accentColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "🏆 LEVEL RECORD BESTS:",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
+                                color = currentLevel.accentColor
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                if (personalBestMoves != -1) {
+                                    Text(
+                                        text = "$personalBestMoves moves",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                                        color = Color.White
+                                    )
+                                }
+                                if (personalBestTime != -1) {
+                                    val mins = personalBestTime / 60
+                                    val secs = personalBestTime % 60
+                                    Text(
+                                        text = "%02d:%02d".format(mins, secs),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            1 -> {
+                // Tab 1: INTERACTIVE ADVANCED CONTROL RIG
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF101016))
+                        .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(20.dp))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "MANUAL SPEEDCUBE STEPS",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color(0xFF9CA3AF)
+                    )
+
+                    // Touch Gamepad Grid Control
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                ConsoleFaceControl(
+                                    label = "TOP FACE (U)",
+                                    cw = "U",
+                                    ccw = "U'",
+                                    color = Color(0xFFFFFFFF),
+                                    onCw = { makeRubikMove("U", 1, 1, 1) },
+                                    onCcw = { makeRubikMove("U'", 1, 1, -1) }
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Row {
-                                    repeat(level.stars) {
-                                        Icon(
-                                            imageVector = Icons.Default.Star,
-                                            contentDescription = "Star",
-                                            tint = level.accentColor,
-                                            modifier = Modifier.size(12.dp)
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                ConsoleFaceControl(
+                                    label = "BOTTOM FACE (D)",
+                                    cw = "D",
+                                    ccw = "D'",
+                                    color = Color(0xFFFFEB3B),
+                                    onCw = { makeRubikMove("D", 1, -1, 1) },
+                                    onCcw = { makeRubikMove("D'", 1, -1, -1) }
+                                )
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                ConsoleFaceControl(
+                                    label = "FRONT FACE (F)",
+                                    cw = "F",
+                                    ccw = "F'",
+                                    color = Color(0xFF00E676),
+                                    onCw = { makeRubikMove("F", 2, 1, 1) },
+                                    onCcw = { makeRubikMove("F'", 2, 1, -1) }
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                ConsoleFaceControl(
+                                    label = "BACK FACE (B)",
+                                    cw = "B",
+                                    ccw = "B'",
+                                    color = Color(0xFF29B6F6),
+                                    onCw = { makeRubikMove("B", 2, -1, 1) },
+                                    onCcw = { makeRubikMove("B'", 2, -1, -1) }
+                                )
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                ConsoleFaceControl(
+                                    label = "RIGHT FACE (R)",
+                                    cw = "R",
+                                    ccw = "R'",
+                                    color = Color(0xFFFF5252),
+                                    onCw = { makeRubikMove("R", 0, 1, 1) },
+                                    onCcw = { makeRubikMove("R'", 0, 1, -1) }
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                ConsoleFaceControl(
+                                    label = "LEFT FACE (L)",
+                                    cw = "L",
+                                    ccw = "L'",
+                                    color = Color(0xFFFF9800),
+                                    onCw = { makeRubikMove("L", 0, -1, 1) },
+                                    onCcw = { makeRubikMove("L'", 0, -1, -1) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Tactical Solved / State Controls Panel (Scramble, Reset, Satisfying UNDO!)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { undoLastMove() },
+                            enabled = moveBackStack.isNotEmpty() && !isSolved,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3F2B2B), 
+                                contentColor = Color(0xFFFF5252),
+                                disabledContainerColor = Color(0xFF1A1515),
+                                disabledContentColor = Color(0xFF5A4444)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("↩️ UNDO LAST", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                NativeCubeLib.resetCube()
+                                moveCount = 0
+                                isSolved = false
+                                gameTimerSeconds = 0
+                                isGameStarted = false
+                                showCompleteModal = false
+                                recentMovesLog.clear()
+                                moveBackStack.clear()
+                            },
+                            modifier = Modifier.weight(0.9f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1C1E2B), contentColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("RESET CUBE", fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                        }
+
+                        Button(
+                            onClick = { triggerScramble() },
+                            modifier = Modifier.weight(1.1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = currentLevel.accentColor, contentColor = Color.Black),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("SCRAMBLE", fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
+            2 -> {
+                // Tab 2: SPEEDCUBING ACADEMY (Auto algorithm executor sequences)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF101016))
+                        .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(20.dp))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "SPEEDCUBE ALGORITHM SIMULATOR",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color(0xFF9CA3AF)
+                    )
+
+                    Text(
+                        text = "Learn how professional speedcubers solve their patterns. Tap any sequence to play it live on the C++ OpenGL model below!",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF6B7280)
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        SpeedtubeAlgorithms.forEach { algo ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF15151F))
+                                    .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(12.dp))
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = algo.name,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold),
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            text = algo.difficulty,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF00E5FF)
+                                        )
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            executeAlgorithmSeq(algo.name, algo.steps)
+                                        },
+                                        enabled = !isPlayingAlgorithm,
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF29B6F6), contentColor = Color.Black),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("DEMO LIVE", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    }
+                                }
+
+                                // Interactive formula tag
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF0D0D14))
+                                        .padding(10.dp)
+                                ) {
+                                    Text(
+                                        text = algo.formula,
+                                        fontFamily = FontFamily.Monospace,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold),
+                                        color = Color.White,
+                                        letterSpacing = 2.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            3 -> {
+                // Tab 3: ENGINE GEAR AND COSMIC VALUE SETUP
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF101016))
+                        .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(20.dp))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Title
+                    Text(
+                        text = "ENGINE GRAPHICS SYSTEM",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color(0xFF9CA3AF)
+                    )
+
+                    // 1: Render modes toggler
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "OpenGL Shading Mode",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFE5E7EB)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val modes = listOf("Classic 3D", "Solid Glow", "Holo Wire")
+                            modes.forEachIndexed { idx, label ->
+                                val isSelected = renderMode == idx
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isSelected) Color(0xFF00E5FF) else Color(0xFF15151F))
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            renderMode = idx
+                                        }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
+                                        ),
+                                        color = if (isSelected) Color.Black else Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 2: Glow theme color presets chooser
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Engine Sticker Glow Palette",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFE5E7EB)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            ThemePresets.forEachIndexed { idx, p ->
+                                val isSelected = selectedThemeIdx == idx
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isSelected) p.colorAccent.copy(alpha = 0.25f) else Color(0xFF15151F))
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected) p.colorAccent else Color(0xFF1D1F2B),
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            selectedThemeIdx = idx
+                                        }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .clip(CircleShape)
+                                                .background(p.colorAccent)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = p.name.split(" ").last(),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                            color = Color.White
                                         )
                                     }
                                 }
                             }
-                            Text(
-                                text = "${level.scrambles}-turn random chaos • ${level.difficulty}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF8E8E9F)
-                            )
-                        }
-
-                        if (isSelected) {
-                            Button(
-                                onClick = { triggerScramble() },
-                                colors = ButtonDefaults.buttonColors(containerColor = level.accentColor, contentColor = Color.Black),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.testTag("scramble_btn_$level.id")
-                            ) {
-                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Scramble", modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("START", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold))
-                            }
                         }
                     }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Level Description Callout
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF181824))
-                    .padding(10.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Level info",
-                    tint = currentLevel.accentColor,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = currentLevel.desc,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFC5C5D2)
-                )
-            }
-
-            // Records Box inside Level Select
-            if (personalBestMoves != -1 || personalBestTime != -1) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(currentLevel.accentColor.copy(alpha = 0.05f))
-                        .border(1.dp, currentLevel.accentColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                        .padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "🏆 PERSONAL RECORD:",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = currentLevel.accentColor
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (personalBestMoves != -1) {
-                            Text(
-                                text = "Moves: $personalBestMoves",
-                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
-                                color = Color.White
-                            )
-                        }
-                        if (personalBestTime != -1) {
-                            val mins = personalBestTime / 60
-                            val secs = personalBestTime % 60
-                            Text(
-                                text = "Time: %02d:%02d".format(mins, secs),
-                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Advanced Face Turns Control Rig Card
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF12121A))
-                .border(1.dp, Color(0xFF1E1E2C), RoundedCornerShape(20.dp))
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "INTERACTIVE LAYER MOVES",
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                color = Color(0xFF8E8E9F)
-            )
-            Text(
-                text = "Standard speedcube turning notation. Prime notations (') rotate counter-clockwise.",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0x66FFFFFF),
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            // Grid of 6 Faces controls (FaceControlBlock layout)
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        FaceControlBlock(
-                            label = "TOP FACE (U)",
-                            cwNotation = "U",
-                            ccwNotation = "U'",
-                            color = Color(0xFFEEEEEE),
-                            onClickCw = { makeRubikMove("U", 1, 1, 1) },
-                            onClickCcw = { makeRubikMove("U'", 1, 1, -1) }
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        FaceControlBlock(
-                            label = "BOTTOM FACE (D)",
-                            cwNotation = "D",
-                            ccwNotation = "D'",
-                            color = Color(0xFFF1C40F),
-                            onClickCw = { makeRubikMove("D", 1, -1, 1) },
-                            onClickCcw = { makeRubikMove("D'", 1, -1, -1) }
-                        )
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        FaceControlBlock(
-                            label = "FRONT FACE (F)",
-                            cwNotation = "F",
-                            ccwNotation = "F'",
-                            color = Color(0xFF2ECC71),
-                            onClickCw = { makeRubikMove("F", 2, 1, 1) },
-                            onClickCcw = { makeRubikMove("F'", 2, 1, -1) }
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        FaceControlBlock(
-                            label = "BACK FACE (B)",
-                            cwNotation = "B",
-                            ccwNotation = "B'",
-                            color = Color(0xFF3498DB),
-                            onClickCw = { makeRubikMove("B", 2, -1, 1) },
-                            onClickCcw = { makeRubikMove("B'", 2, -1, -1) }
-                        )
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        FaceControlBlock(
-                            label = "RIGHT FACE (R)",
-                            cwNotation = "R",
-                            ccwNotation = "R'",
-                            color = Color(0xFFE74C3C),
-                            onClickCw = { makeRubikMove("R", 0, 1, 1) },
-                            onClickCcw = { makeRubikMove("R'", 0, 1, -1) }
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        FaceControlBlock(
-                            label = "LEFT FACE (L)",
-                            cwNotation = "L",
-                            ccwNotation = "L'",
-                            color = Color(0xFFE67E22),
-                            onClickCw = { makeRubikMove("L", 0, -1, 1) },
-                            onClickCcw = { makeRubikMove("L'", 0, -1, -1) }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Game Control Actions footer (Reset cube, Scramble)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        NativeCubeLib.resetCube()
-                        moveCount = 0
-                        isSolved = false
-                        gameTimerSeconds = 0
-                        isGameStarted = false
-                        showCompleteModal = false
-                        recentMoves.clear()
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("reset_puzzle_btn"),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F1F2F), contentColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reset Puzzle", modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("RESET CUBE", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-
-                Button(
-                    onClick = { triggerScramble() },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("scramble_puzzle_btn"),
-                    colors = ButtonDefaults.buttonColors(containerColor = currentLevel.accentColor, contentColor = Color.Black),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Scramble Puzzle", modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("SCRAMBLE", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Advanced GLES Rendering Customizer Settings Box
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF12121A))
-                .border(1.dp, Color(0xFF1E1E2C), RoundedCornerShape(20.dp))
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "ENGINE VISUAL CUSTOMIZER",
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                color = Color(0xFF8E8E9F),
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            val modes = listOf("Traditional", "Neon Solid", "Sticker Outline")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                modes.forEachIndexed { idx, label ->
-                    val isSelected = renderMode == idx
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) Color(0xFF00D1FF) else Color(0xFF1C1C28))
-                            .clickable { renderMode = idx }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    // 3: Spinning Axis and Gyro Controllers
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
-                            ),
-                            color = if (isSelected) Color.Black else Color.White
+                            text = "OpenGL Continuous Idle Spin",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFE5E7EB)
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SpinAxisRow(label = "Rotate X-Axis", isOn = activeAngleXSpin, onToggle = { activeAngleXSpin = !activeAngleXSpin }, accent = Color(0xFFFF5252), modifier = Modifier.weight(1f))
+                            SpinAxisRow(label = "Rotate Y-Axis", isOn = activeAngleYSpin, onToggle = { activeAngleYSpin = !activeAngleYSpin }, accent = Color(0xFF00FFCC), modifier = Modifier.weight(1f))
+                            SpinAxisRow(label = "Rotate Z-Axis", isOn = activeAngleZSpin, onToggle = { activeAngleZSpin = !activeAngleZSpin }, accent = Color(0xFFF1C40F), modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -916,44 +1469,78 @@ fun CubeDashboardScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun FaceControlBlock(
+fun SpinAxisRow(
     label: String,
-    cwNotation: String,
-    ccwNotation: String,
+    isOn: Boolean,
+    onToggle: () -> Unit,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isOn) accent.copy(alpha = 0.15f) else Color(0xFF15151F))
+            .border(1.dp, if (isOn) accent else Color(0xFF222435), RoundedCornerShape(12.dp))
+            .clickable { onToggle() }
+            .padding(10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = if (isOn) "ON" else "OFF",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                color = if (isOn) accent else Color(0xFF6B7280)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun ConsoleFaceControl(
+    label: String,
+    cw: String,
+    ccw: String,
     color: Color,
-    onClickCw: () -> Unit,
-    onClickCcw: () -> Unit
+    onCw: () -> Unit,
+    onCcw: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF181824))
-            .border(1.dp, Color(0xFF222230), RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF15151F))
+            .border(1.dp, Color(0xFF1D1F2B), RoundedCornerShape(14.dp))
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Face Color Badge
+        // Colored face badge
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(color.copy(alpha = 0.12f))
-                .padding(vertical = 4.dp)
+                .padding(vertical = 5.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(9.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(color)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
-                color = if (color == Color(0xFFEEEEEE)) Color.White else color
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 9.sp),
+                color = if (color == Color(0xFFFFFFFF)) Color.White else color
             )
         }
         
@@ -963,25 +1550,23 @@ fun FaceControlBlock(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // CW Button
             Button(
-                onClick = onClickCw,
+                onClick = onCw,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D1D2C), contentColor = Color.White),
-                contentPadding = PaddingValues(vertical = 6.dp),
-                shape = RoundedCornerShape(8.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D1E2C), contentColor = Color.White),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Text(cwNotation, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = Color.White)
+                Text(cw, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black), color = Color.White)
             }
-            // CCW Button
             Button(
-                onClick = onClickCcw,
+                onClick = onCcw,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D1D2C), contentColor = Color(0xFF00D1FF)),
-                contentPadding = PaddingValues(vertical = 6.dp),
-                shape = RoundedCornerShape(8.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D1E2C), contentColor = Color(0xFF00E5FF)),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Text(ccwNotation, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = Color(0xFF00D1FF))
+                Text(ccw, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black), color = Color(0xFF00E5FF))
             }
         }
     }
