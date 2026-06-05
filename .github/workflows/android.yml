@@ -1,0 +1,72 @@
+name: Android Build & Package Application
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  build:
+    name: Build Android NDK App
+    runs-on: ubuntu-latest
+    env:
+      STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive # Helpful if you end up splitting C++ dependencies into submodules
+
+      - name: Set up Java JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'zulu' # Highly reliable JDK distribution for Android builds
+          cache: 'gradle'      # Caches Gradle files to speed up subsequent runs
+
+      - name: Set up Android NDK & CMake
+        uses: android-actions/setup-android@v3
+        # Host runners have pre-installed NDK & CMake. 
+        # Adding explicit steps to ensure clean environment for C++ NDK builds.
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        # Builds the application in Debug mode using the default android-debug key.
+        # This will automatically compile your C++ sources using CMake and the NDK.
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ndk-3d-cube-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7 # Keep the APK for a week before auto-deleting
+
+      # OPTIONAL: Release Build Job (Triggers only if release keystore secrets are configured on GitHub)
+      - name: Build Release APK
+        if: "${{ env.STORE_PASSWORD != '' && env.KEY_PASSWORD != '' && env.RELEASE_KEYSTORE_BASE64 != '' }}"
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PATH: "${{ github.workspace }}/release.jks"
+        run: |
+          # Recreate keystore file from Base64 secret stored in GitHub Secrets
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > release.jks
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload Release APK Artifact
+        if: "${{ env.STORE_PASSWORD != '' && env.KEY_PASSWORD != '' && env.RELEASE_KEYSTORE_BASE64 != '' }}"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ndk-3d-cube-release-apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk # Or signed depending on signing script
+          if-no-files-found: warn
+          retention-days: 14

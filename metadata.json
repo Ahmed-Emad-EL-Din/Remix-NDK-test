@@ -1,0 +1,8 @@
+{
+  "name": "Remix: NDK 3D Cube",
+  "description": "A native C++ and OpenGL ES 3D rotating cube rendered via the Android NDK.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
