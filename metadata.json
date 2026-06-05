@@ -1,6 +1,6 @@
 {
-  "name": "Remix: NDK 3D Cube",
-  "description": "A native C++ and OpenGL ES 3D rotating cube rendered via the Android NDK.",
+  "name": "3D Rubik's Cube",
+  "description": "A high-fidelity 3D Rubik's Cube speedcubing game featuring multiple challenge levels, move logs, solved checks, and a real-time OpenGL ES 3.0 NDK engine.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

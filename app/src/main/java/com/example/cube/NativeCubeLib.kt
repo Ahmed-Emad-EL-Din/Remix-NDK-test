@@ -67,6 +67,42 @@ object NativeCubeLib {
         }
     }
 
+    fun rotateLayer(axis: Int, layer: Int, direction: Int): Boolean {
+        return if (isLibraryLoaded) {
+            nativeRotateLayer(axis, layer, direction)
+        } else {
+            false
+        }
+    }
+
+    fun scramble(moves: Int) {
+        if (isLibraryLoaded) {
+            nativeScramble(moves)
+        }
+    }
+
+    fun isSolved(): Boolean {
+        return if (isLibraryLoaded) {
+            nativeIsSolved()
+        } else {
+            false
+        }
+    }
+
+    fun resetCube() {
+        if (isLibraryLoaded) {
+            nativeResetCube()
+        }
+    }
+
+    fun getMoveCount(): Int {
+        return if (isLibraryLoaded) {
+            nativeGetMoveCount()
+        } else {
+            0
+        }
+    }
+
     // Underlying Native external declarations
     private external fun nativeOnSurfaceCreated()
     private external fun nativeInit(width: Int, height: Int)
@@ -76,4 +112,9 @@ object NativeCubeLib {
     private external fun nativeSetRenderMode(mode: Int)
     private external fun nativeSetUniformColor(r: Float, g: Float, b: Float, a: Float)
     private external fun nativeAddRotation(dx: Float, dy: Float)
+    private external fun nativeRotateLayer(axis: Int, layer: Int, direction: Int): Boolean
+    private external fun nativeScramble(moves: Int)
+    private external fun nativeIsSolved(): Boolean
+    private external fun nativeResetCube()
+    private external fun nativeGetMoveCount(): Int
 }
